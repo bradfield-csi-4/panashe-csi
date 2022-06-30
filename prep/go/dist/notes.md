@@ -48,6 +48,8 @@ func main() {
 }
 ```
 
+[This post](https://eli.thegreenplace.net/2019/go-compiler-internals-adding-a-new-statement-to-go-part-1/) was very useful for understanding this problem.
+
 # Example 2
 # Example 3
 # Example 4
