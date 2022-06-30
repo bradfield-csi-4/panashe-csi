@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     }
 
     int num_paths = argc > optind ? argc - optind : 1;
-    char **paths = malloc(num_paths);
+    char **paths = malloc(num_paths*sizeof(char*));
     for (int i = 0; i < num_paths; i++) {
         *(paths+i) = alloc_path();
     }
