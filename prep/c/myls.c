@@ -16,7 +16,6 @@
 
 
 char *join_path(char *head, char *tail);
-char *alloc_path();
 
 typedef struct LsOpts {
     bool long_fmt;
@@ -27,8 +26,6 @@ int long_fmt(LsOpts opts, unsigned int num_paths, char **paths);
 int default_fmt(LsOpts opts, unsigned int num_paths, char **paths);
 
 int main(int argc, char *argv[]) {
-    char *path = alloc_path();
-
     LsOpts *opts;
     int ch;
     while ((ch = getopt(argc, argv, "lh")) != -1) {
@@ -46,10 +43,7 @@ int main(int argc, char *argv[]) {
     }
 
     int num_paths = argc > optind ? argc - optind : 1;
-    char **paths = malloc(num_paths*sizeof(char*));
-    for (int i = 0; i < num_paths; i++) {
-        *(paths+i) = alloc_path();
-    }
+    char **paths = malloc(num_paths*sizeof(char *));
 
     if (optind >= argc) {
         // Only path is .
@@ -66,6 +60,8 @@ int main(int argc, char *argv[]) {
     } else {
         status = default_fmt(*opts, num_paths, paths);
     }
+
+    free(paths);
 
     if (status) {
         exit(EXIT_FAILURE);
@@ -103,25 +99,25 @@ int default_fmt(LsOpts opts, unsigned int num_paths, char **paths) {
 }
 
 char *format_f_size(long size, bool human) {
-  char *size_str;
-  if (human) {
-    if (size < KB) {
-      asprintf(&size_str, "%ldB", size);
-    } else if (size < MB) {
-      asprintf(&size_str, "%.1fK", size / ((double) KB));
-    } else if (size < GB) {
-      asprintf(&size_str, "%.1fM", size / ((double) MB));
-    } else if (size < TB) {
-      asprintf(&size_str, "%.1fG", size / ((double) GB));
-    } else if (size < PB) {
-      asprintf(&size_str, "%.1fT", size / ((double) TB));
+    char *size_str;
+    if (human) {
+        if (size < KB) {
+            asprintf(&size_str, "%ldB", size);
+        } else if (size < MB) {
+            asprintf(&size_str, "%.1fK", size / ((double) KB));
+        } else if (size < GB) {
+            asprintf(&size_str, "%.1fM", size / ((double) MB));
+        } else if (size < TB) {
+            asprintf(&size_str, "%.1fG", size / ((double) GB));
+        } else if (size < PB) {
+            asprintf(&size_str, "%.1fT", size / ((double) TB));
+        } else {
+            asprintf(&size_str, "%.1fP", size / ((double) PB));
+        }
     } else {
-      asprintf(&size_str, "%.1fP", size / ((double) PB));
+        asprintf(&size_str, "%ld", size);
     }
-  } else {
-    asprintf(&size_str, "%ld", size);
-  }
-  return size_str;
+    return size_str;
 }
 
 int long_fmt(LsOpts opts, unsigned int num_paths, char **paths) {
@@ -150,6 +146,7 @@ int long_fmt(LsOpts opts, unsigned int num_paths, char **paths) {
             char *f_size = format_f_size(ftell(fp), opts.human);
             fclose(fp);
             printf("%20s\t%s\n", dirp->d_name, f_size);
+            free(full_path);
         }
 
         closedir(dp);
@@ -160,7 +157,7 @@ int long_fmt(LsOpts opts, unsigned int num_paths, char **paths) {
 }
 
 char *join_path(char *head, char *tail) {
-    char *full_path = alloc_path();
+    char *full_path = malloc(MAX_PATH_SIZE * sizeof(char));
     int i;
     for (i = 0; i < strlen(head); i++) {
         *(full_path+i) = *(head+i);
@@ -170,10 +167,6 @@ char *join_path(char *head, char *tail) {
         full_path[i++] = tail[j];
     }
     return full_path;
-}
-
-char *alloc_path() {
-    return malloc(MAX_PATH_SIZE * sizeof(char));
 }
 
 /*
