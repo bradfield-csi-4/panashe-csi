@@ -29,7 +29,7 @@ int default_fmt(LsOpts opts, unsigned int num_paths, char **paths);
 int main(int argc, char *argv[]) {
     char *path = alloc_path();
 
-    LsOpts *opts = malloc(sizeof(LsOpts));
+    LsOpts *opts;
     int ch;
     while ((ch = getopt(argc, argv, "lh")) != -1) {
         switch (ch) {
