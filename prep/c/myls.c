@@ -95,6 +95,7 @@ int default_fmt(LsOpts opts, unsigned int num_paths, char **paths) {
             printf("%s\n", dirp->d_name);
         }
 
+        printf("\n");
         closedir(dp);
     }
 
@@ -153,6 +154,7 @@ int long_fmt(LsOpts opts, unsigned int num_paths, char **paths) {
 
         closedir(dp);
     }
+    printf("\n");
 
     return 0;
 }
