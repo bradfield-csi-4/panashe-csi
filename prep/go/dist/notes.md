@@ -143,8 +143,238 @@ func main() {
 
 # Example 3
 
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"sync"
+)
+
+func main() {
+	var urls = []string{
+		"https://bradfieldcs.com/courses/architecture/",
+		"https://bradfieldcs.com/courses/networking/",
+		"https://bradfieldcs.com/courses/databases/",
+	}
+	var wg sync.WaitGroup
+	for i := range urls {
+		go func(i int) {
+			wg.Add(1)
+			// Decrement the counter when the goroutine completes.
+			defer wg.Done()
+
+			_, err := http.Get(urls[i])
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println("Successfully fetched", urls[i])
+		}(i)
+	}
+
+	// Wait for all url fetches
+	wg.Wait()
+	fmt.Println("all url fetches done!")
+}
+```
+
+prints only:
+
+```
+all url fetches done!
+```
+
+from the documentation of [`Waitgroup.Add`](https://pkg.go.dev/sync@go1.18.3#WaitGroup.Add):
+
+> Note that calls with a positive delta that occur when the counter is zero must happen before a Wait. Calls with a negative delta, or calls with a positive delta that start when the counter is greater than zero, may happen at any time. Typically this means the calls to Add should execute before the statement creating the goroutine or other event to be waited for.
+
+So the code above presents a subtle race condition. The first goroutine may not launch, and thus call `wg.Add(1)` before the call to `wg.Wait()`. The fix is to move the `Add` call before the goroutine.
+
+```go
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"sync"
+)
+
+func main() {
+	var urls = []string{
+		"https://bradfieldcs.com/courses/architecture/",
+		"https://bradfieldcs.com/courses/networking/",
+		"https://bradfieldcs.com/courses/databases/",
+	}
+	var wg sync.WaitGroup
+	for i := range urls {
+		wg.Add(1)
+		go func(i int) {
+			// Decrement the counter when the goroutine completes.
+			defer wg.Done()
+
+			_, err := http.Get(urls[i])
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println("Successfully fetched", urls[i])
+		}(i)
+	}
+
+	// Wait for all url fetches
+	wg.Wait()
+	fmt.Println("all url fetches done!")
+}
+```
+
 # Example 4
+```go
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	done := make(chan struct{}, 1)
+	go func() {
+		fmt.Println("performing initialization...")
+		<-done
+	}()
+
+	done <- struct{}{}
+	fmt.Println("initialization done, continuing with rest of program")
+}
+```
+
+Here, the output is:
+
+```
+initialization done, continuing with rest of program
+```
+
+The issue here is that `main` returns before the goroutine is executed. Note that receive from a channel blocks until a value becomes available on that channel. Since we're using this channel purely to communicate status between main and the goroutine, we should receive in main and put in the goroutine instead.
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	done := make(chan struct{}, 1)
+	go func() {
+		fmt.Println("performing initialization...")
+		done <- struct{}{}
+	}()
+
+
+	<-done
+	fmt.Println("initialization done, continuing with rest of program")
+}
+```
+
+
 # Example 5
+```go
+package main
+
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
+var responses = []string{
+	"200 OK",
+	"402 Payment Required",
+	"418 I'm a teapot",
+}
+
+func randomDelay(maxMillis int) time.Duration {
+	return time.Duration(rand.Intn(maxMillis)) * time.Millisecond
+}
+
+func query(endpoint string) string {
+	// Simulate querying the given endpoint
+	delay := randomDelay(100)
+	time.Sleep(delay)
+
+	i := rand.Intn(len(responses))
+	return responses[i]
+}
+
+// Query each of the mirrors in parallel and return the first
+// response (this approach increases the amount of traffic but
+// significantly improves "tail latency")
+func parallelQuery(endpoints []string) string {
+	results := make(chan string)
+	for i := range endpoints {
+		go func(i int) {
+			results <- query(endpoints[i])
+		}(i)
+	}
+	return <-results
+}
+
+func main() {
+	var endpoints = []string{
+		"https://fakeurl.com/endpoint",
+		"https://mirror1.com/endpoint",
+		"https://mirror2.com/endpoint",
+	}
+
+	// Simulate long-running server process that makes continuous queries
+	for {
+		fmt.Println(parallelQuery(endpoints))
+		delay := randomDelay(100)
+		time.Sleep(delay)
+	}
+}
+```
+
+It's not immediately evident what the issue is here. Let's modify this to make the problem more apparent:
+
+```go
+func parallelQuery(endpoints []string) []string {
+	results := make(chan []string)
+	for i := range endpoints {
+		go func(i int) {
+			results <- []string{endpoints[i], query(endpoints[i])}
+		}(i)
+	}
+	return <-results
+}
+
+func main() {
+	var endpoints = []string{
+		"https://fakeurl.com/endpoint",
+		"https://mirror1.com/endpoint",
+		"https://mirror2.com/endpoint",
+	}
+
+	// Simulate long-running server process that makes continuous queries
+	for i := 0; i < 5; i++ {
+		fmt.Println(parallelQuery(endpoints))
+		delay := randomDelay(100)
+		time.Sleep(delay)
+	}
+}
+```
+
+I find that mirror1 is usually the chosen server (stable across runs).
+```
+[https://mirror1.com/endpoint 418 I'm a teapot]
+[https://mirror1.com/endpoint 418 I'm a teapot]
+[https://mirror1.com/endpoint 200 OK]
+[https://mirror1.com/endpoint 200 OK]
+[https://mirror1.com/endpoint 402 Payment Required]
+```
+
+
 # Example 6
 # Example 7
 # Example 8
