@@ -278,7 +278,7 @@ func main() {
 ```
 
 
-# Example 5
+# Example 5 (unsolved)
 ```go
 package main
 
@@ -376,6 +376,123 @@ I find that mirror1 is usually the chosen server (stable across runs).
 
 
 # Example 6
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+type coordinator struct {
+	lock   sync.RWMutex
+	leader string
+}
+
+func newCoordinator(leader string) *coordinator {
+	return &coordinator{
+		lock:   sync.RWMutex{},
+		leader: leader,
+	}
+}
+
+func (c *coordinator) logState() {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	fmt.Printf("leader = %q\n", c.leader)
+}
+
+func (c *coordinator) setLeader(leader string, shouldLog bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.leader = leader
+
+	if shouldLog {
+		c.logState()
+	}
+}
+
+func main() {
+	c := newCoordinator("us-east")
+	c.logState()
+	c.setLeader("us-west", true)
+}
+```
+
+when run, produces:
+
+```
+leader = "us-east"
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [semacquire]:
+sync.runtime_SemacquireMutex(0xc000078ec0, 0x13, 0xc000078ec0)
+        /nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/runtime/sema.go:71 +0x25
+sync.(*RWMutex).RLock(...)
+        /nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/sync/rwmutex.go:63
+main.(*coordinator).logState(0xc00007c180)
+        /Users/panashe/code/panashe-csi/prep/go/dist/example-6.go:21 +0x4e
+main.(*coordinator).setLeader(0xc00007c180, {0x10a3f6a, 0x7}, 0x1)
+        /Users/panashe/code/panashe-csi/prep/go/dist/example-6.go:34 +0xa9
+main.main()
+        /Users/panashe/code/panashe-csi/prep/go/dist/example-6.go:41 +0x65
+exit status 2
+```
+
+The `logState` method is attempting to acquire the read lock while the write lock is already held. Three possible solutions are to:
+- rely on the caller to correctly lock before calling `logState`
+- pass `logState` a boolean to tell it whether to attempt to acquire the lock
+- split our `logState` method into two variants, one that does acquire locks, and one that doesn't. With this design, the one that acquires locks could be public, while the other is kept private.
+
+An example of the third solution:
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+type coordinator struct {
+	lock   sync.RWMutex
+	leader string
+}
+
+func newCoordinator(leader string) *coordinator {
+	return &coordinator{
+		lock:   sync.RWMutex{},
+		leader: leader,
+	}
+}
+
+func (c *coordinator) logState() {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	fmt.Printf("leader = %q\n", c.leader)
+}
+
+func (c *coordinator) setLeader(leader string, shouldLog bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.leader = leader
+
+	if shouldLog {
+		c.logState()
+	}
+}
+
+func main() {
+	c := newCoordinator("us-east")
+	c.logState()
+	c.setLeader("us-west", true)
+}
+```
+
 # Example 7
 # Example 8
 # Example 9
