@@ -494,5 +494,103 @@ func main() {
 ```
 
 # Example 7
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+const (
+	numGoroutines = 100
+	numIncrements = 100
+)
+
+type counter struct {
+	count int
+}
+
+func safeIncrement(lock sync.Mutex, c *counter) {
+	lock.Lock()
+	defer lock.Unlock()
+
+	c.count += 1
+}
+
+func main() {
+	var globalLock sync.Mutex
+	c := &counter{
+		count: 0,
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for j := 0; j < numIncrements; j++ {
+				safeIncrement(globalLock, c)
+			}
+		}()
+	}
+
+	wg.Wait()
+	fmt.Println(c.count)
+}
+```
+
+The expected value of the print out is \(100 * 100 = 10000\) in the first run on my machine, this printed 5393.
+
+The issue here is that `safeIncrement` receives a copy of `lock`. In Go, primitive values and structs that only contain primitives are copied when passed as function arguments, and `sync.Mutex` fits this description. The solution is to pass a reference to `safeIncrement`. Note that I'm relying on go's implicit pointer dereference.
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+const (
+	numGoroutines = 100
+	numIncrements = 100
+)
+
+type counter struct {
+	count int
+}
+
+func safeIncrement(lock *sync.Mutex, c *counter) {
+	lock.Lock()
+	defer lock.Unlock()
+
+	c.count += 1
+}
+
+func main() {
+	var globalLock sync.Mutex
+	c := &counter{
+		count: 0,
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for j := 0; j < numIncrements; j++ {
+				safeIncrement(&globalLock, c)
+			}
+		}()
+	}
+
+	wg.Wait()
+	fmt.Println(c.count)
+}
+```
+
 # Example 8
 # Example 9
