@@ -593,4 +593,485 @@ func main() {
 ```
 
 # Example 8
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+type dbService struct {
+	lock       *sync.RWMutex
+	connection string
+}
+
+func newDbService(connection string) *dbService {
+	return &dbService{
+		lock:       &sync.RWMutex{},
+		connection: connection,
+	}
+}
+
+func (d *dbService) logState() {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+
+	fmt.Printf("connection %q is healthy\n", d.connection)
+}
+
+func (d *dbService) takeSnapshot() {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+
+	fmt.Printf("Taking snapshot over connection %q\n", d.connection)
+
+	// Simulate slow operation
+	time.Sleep(time.Second)
+
+	d.logState()
+}
+
+func (d *dbService) updateConnection(connection string) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	d.connection = connection
+}
+
+func main() {
+	d := newDbService("127.0.0.1:3001")
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		d.takeSnapshot()
+	}()
+
+	// Simulate other DB accesses
+	time.Sleep(200 * time.Millisecond)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		d.updateConnection("127.0.0.1:8080")
+	}()
+
+	wg.Wait()
+}
+```
+
+outputs:
+
+```
+Taking snapshot over connection "127.0.0.1:3001"
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [semacquire]:
+sync.runtime_Semacquire(0x0)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/runtime/sema.go:56 +0x25
+sync.(*WaitGroup).Wait(0xbebc200)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/sync/waitgroup.go:130 +0x71
+main.main()
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-8-fix.go:69 +0x17c
+
+goroutine 6 [semacquire]:
+sync.runtime_SemacquireMutex(0x104b5df, 0x47, 0x10320f6)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/runtime/sema.go:71 +0x25
+sync.(*RWMutex).RLock(...)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/sync/rwmutex.go:63
+main.(*dbService).logState(0xc00000c048)
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-8-fix.go:22 +0x4e
+main.(*dbService).takeSnapshot(0xc00000c048)
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-8-fix.go:37 +0xe7
+main.main.func1()
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-8-fix.go:56 +0x58
+created by main.main
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-8-fix.go:53 +0xfe
+
+goroutine 17 [semacquire]:
+sync.runtime_SemacquireMutex(0x10c2780, 0x18, 0x10a9bd6)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/runtime/sema.go:71 +0x25
+sync.(*RWMutex).Lock(0x1)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/sync/rwmutex.go:116 +0x71
+main.(*dbService).updateConnection(0xc00000c048, {0x10a5a84, 0xe})
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-8-fix.go:41 +0x45
+main.main.func2()
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-8-fix.go:66 +0x68
+created by main.main
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-8-fix.go:63 +0x172
+exit status 2
+```
+
+In this code, the snapshot code acquires the read lock, and then attempts to acquire it again in `logState`, blocking that goroutine. The second goroutine attempts to acquire the write lock, but blocks because the other goroutine holds the read lock. The whole program deadlocks. The fix here is to not acquire the read lock in `logState`.
+
+```
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+type dbService struct {
+	lock       *sync.RWMutex
+	connection string
+}
+
+func newDbService(connection string) *dbService {
+	return &dbService{
+		lock:       &sync.RWMutex{},
+		connection: connection,
+	}
+}
+
+
+// unsafeLogState should only be called while holding a read lock to avoid stale reads.
+func (d *dbService) unsafeLogState() {
+	fmt.Printf("connection %q is healthy\n", d.connection)
+}
+
+func (d *dbService) takeSnapshot() {
+	d.lock.RLock()
+	defer d.lock.RUnlock()
+
+	fmt.Printf("Taking snapshot over connection %q\n", d.connection)
+
+	// Simulate slow operation
+	time.Sleep(time.Second)
+
+	d.unsafeLogState()
+}
+
+func (d *dbService) updateConnection(connection string) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	d.connection = connection
+}
+
+func main() {
+	d := newDbService("127.0.0.1:3001")
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		d.takeSnapshot()
+	}()
+
+	// Simulate other DB accesses
+	time.Sleep(200 * time.Millisecond)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		d.updateConnection("127.0.0.1:8080")
+	}()
+
+	wg.Wait()
+}
+```
+
+
 # Example 9
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+type StateManager struct {
+	lock *sync.RWMutex
+	consumers map[int]*Consumer
+}
+
+func NewStateManager(numConsumers int) *StateManager {
+	s := &StateManager{
+		lock:      &sync.RWMutex{},
+		consumers: make(map[int]*Consumer),
+	}
+	for i := 0; i < numConsumers; i++ {
+		s.consumers[i] = NewConsumer(i, s)
+	}
+	return s
+}
+
+func (s *StateManager) AddConsumer(c *Consumer) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.consumers[c.id] = c
+}
+
+func (s *StateManager) RemoveConsumer(id int) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	delete(s.consumers, id)
+}
+
+func (s *StateManager) GetConsumer(id int) *Consumer {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return s.consumers[id]
+}
+
+func (s *StateManager) PrintState() {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	fmt.Println("Started PrintState")
+	for _, consumer := range s.consumers {
+		fmt.Println(consumer.GetState())
+	}
+	fmt.Println("Done with PrintState")
+}
+
+type Consumer struct {
+	id   int
+	s    *StateManager
+	lock *sync.RWMutex
+}
+
+func NewConsumer(id int, s *StateManager) *Consumer {
+	return &Consumer{
+		id:   id,
+		s:    s,
+		lock: &sync.RWMutex{},
+	}
+}
+
+func (c *Consumer) GetState() string {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	return fmt.Sprintf("<GetState result for consumer %d>", c.id)
+}
+
+func (c *Consumer) Terminate() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// You can imagine that this internal cleanup mutates the state
+	// of the Consumer
+	fmt.Printf("Performing internal cleanup for consumer %d\n", c.id)
+
+	c.s.RemoveConsumer(c.id)
+}
+func main() {
+	s := NewStateManager(10)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		c := s.GetConsumer(0)
+		c.Terminate()
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		s.PrintState()
+	}()
+
+	wg.Wait()
+}
+```
+
+Output:
+```
+Started PrintState
+Performing internal cleanup for consumer 0
+<GetState result for consumer 7>
+<GetState result for consumer 8>
+<GetState result for consumer 9>
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [semacquire]:
+sync.runtime_Semacquire(0x0)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/runtime/sema.go:56 +0x25
+sync.(*WaitGroup).Wait(0x10977a0)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/sync/waitgroup.go:130 +0x71
+main.main()
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:113 +0x248
+
+goroutine 18 [semacquire]:
+sync.runtime_SemacquireMutex(0x10a1d20, 0x0, 0xc00004a718)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/runtime/sema.go:71 +0x25
+sync.(*RWMutex).Lock(0x2c)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/sync/rwmutex.go:116 +0x71
+main.(*StateManager).RemoveConsumer(0xc0000a0210, 0xc0000b4008)
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:34 +0x3e
+main.(*Consumer).Terminate(0xc0000ae030)
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:87 +0xc6
+main.main.func1()
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:102 +0x65
+created by main.main
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:96 +0x1d2
+
+goroutine 19 [semacquire]:
+sync.runtime_SemacquireMutex(0x113c3a0, 0x20, 0xc0000a4ea0)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/runtime/sema.go:71 +0x25
+sync.(*RWMutex).RLock(...)
+	/nix/store/1168hmr97r5lk8d7y0hinp3vf42sq4r2-go-1.17.7/share/go/src/sync/rwmutex.go:63
+main.(*Consumer).GetState(0xc0000ae030)
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:73 +0x56
+main.(*StateManager).PrintState(0xc0000a0210)
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:53 +0x134
+main.main.func2()
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:110 +0x58
+created by main.main
+	/Users/panashe/code/panashe-csi/prep/go/dist/example-9-fix.go:106 +0x23e
+exit status 2
+```
+
+Here's what I believe happens:
+1. both goroutines are launched.
+2. `s.GetConsumer` will usually enter the read lock on `s` first, blocking `s.PrintState` in the second goroutine.
+3. When `s.GetConsumer` returns, `s.PrintState` acquires the read lock on `s` and is able to proceed.
+4. `c.Terminate` in the first goroutine acquires the write lock of the consumer, and attempts to acquire a write lock on `s`, which blocks during the `s.PrintState` call.
+5. When `s.GetState` gets to consumer 0, it attempts to acquire the write lock on it, which is still held by `c.Terminate`, so it blocks.
+6. deadlock!
+
+This can be fixed by ensuring that locks are always acquired in the same order,
+so that we can't have two goroutines that are blocked on a lock that the other
+routine holds. In this case, acquiring the state manager locks before the
+consumer locks makes the most sense. I rewrote `c.Terminate` to not call back
+into `s.RemoveConsumer`. Instead, `s.RemoveConsumer` calls into `c.Terminate`,
+and the consumer no longer attempts to acquire locks on the state manager.
+
+Solution:
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+type StateManager struct {
+	lock *sync.RWMutex
+	consumers map[int]*Consumer
+}
+
+func NewStateManager(numConsumers int) *StateManager {
+	s := &StateManager{
+		lock:      &sync.RWMutex{},
+		consumers: make(map[int]*Consumer),
+	}
+	for i := 0; i < numConsumers; i++ {
+		s.consumers[i] = NewConsumer(i, s)
+	}
+	return s
+}
+
+func (s *StateManager) AddConsumer(c *Consumer) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.consumers[c.id] = c
+}
+
+func (s *StateManager) RemoveConsumer(id int) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	c := s.unsafeGetConsumer(id)
+	c.Terminate()
+	delete(s.consumers, id)
+}
+
+func (s *StateManager) GetConsumer(id int) *Consumer {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return s.unsafeGetConsumer(id)
+}
+
+// unsafeGetConsumer should only be called while holding the read lock for s
+func (s *StateManager) unsafeGetConsumer(id int) *Consumer {
+	return s.consumers[id]
+}
+
+func (s *StateManager) PrintState() {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	fmt.Println("Started PrintState")
+	for _, consumer := range s.consumers {
+		fmt.Println(consumer.GetState())
+	}
+	fmt.Println("Done with PrintState")
+}
+
+type Consumer struct {
+	id   int
+	s    *StateManager
+	lock *sync.RWMutex
+}
+
+func NewConsumer(id int, s *StateManager) *Consumer {
+	return &Consumer{
+		id:   id,
+		s:    s,
+		lock: &sync.RWMutex{},
+	}
+}
+
+func (c *Consumer) GetState() string {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	return fmt.Sprintf("<GetState result for consumer %d>", c.id)
+}
+
+func (c *Consumer) Terminate() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// You can imagine that this internal cleanup mutates the state
+	// of the Consumer
+	fmt.Printf("Performing internal cleanup for consumer %d\n", c.id)
+}
+
+func main() {
+	s := NewStateManager(10)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		cid := 0
+		_ = s.GetConsumer(cid)
+		s.RemoveConsumer(cid)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		s.PrintState()
+	}()
+
+	wg.Wait()
+}
+```
