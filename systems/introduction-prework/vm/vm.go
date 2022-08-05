@@ -1,5 +1,7 @@
 package vm
 
+import "fmt"
+
 const (
 	Load  = 0x01
 	Store = 0x02
@@ -43,37 +45,31 @@ loop:
 			reg, registers[0] = memory[registers[0]], registers[0]+1
 			addr, registers[0] = memory[registers[0]], registers[0]+1
 			registers[reg] = memory[addr]
-			continue loop
 		case Store:
 			var reg, addr byte
 			reg, registers[0] = memory[registers[0]], registers[0]+1
 			addr, registers[0] = memory[registers[0]], registers[0]+1
 			memory[addr] = registers[reg]
-			continue loop
 		case Add:
 			var reg1, reg2 byte
 			reg1, registers[0] = memory[registers[0]], registers[0]+1
 			reg2, registers[0] = memory[registers[0]], registers[0]+1
 			registers[reg1] = registers[reg1] + registers[reg2]
-			continue loop
 		case Sub:
 			var reg1, reg2 byte
 			reg1, registers[0] = memory[registers[0]], registers[0]+1
 			reg2, registers[0] = memory[registers[0]], registers[0]+1
 			registers[reg1] = registers[reg1] - registers[reg2]
-			continue loop
 		case Addi:
 			var reg, v byte
 			reg, registers[0] = memory[registers[0]], registers[0]+1
 			v, registers[0] = memory[registers[0]], registers[0]+1
 			registers[reg] = registers[reg] + v
-			continue loop
 		case Subi:
 			var reg, v byte
 			reg, registers[0] = memory[registers[0]], registers[0]+1
 			v, registers[0] = memory[registers[0]], registers[0]+1
 			registers[reg] = registers[reg] - v
-			continue loop
 		case Jump:
 			var loc byte
 			loc, registers[0] = memory[registers[0]], registers[0]+1
@@ -85,10 +81,10 @@ loop:
 			if registers[reg] == 0 {
 				registers[0] += offset
 			}
-			continue loop
 		case Halt:
-		default:
 			break loop
+		default:
+			panic(fmt.Sprintf("Unrecognized operation %x", op))
 		}
 	}
 }
