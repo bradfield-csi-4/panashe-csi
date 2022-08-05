@@ -63,9 +63,29 @@ loop:
 			registers[reg1] = registers[reg1] - registers[reg2]
 			continue loop
 		case Addi:
+			var reg, v byte
+			reg, registers[0] = memory[registers[0]], registers[0]+1
+			v, registers[0] = memory[registers[0]], registers[0]+1
+			registers[reg] = registers[reg] + v
+			continue loop
 		case Subi:
+			var reg, v byte
+			reg, registers[0] = memory[registers[0]], registers[0]+1
+			v, registers[0] = memory[registers[0]], registers[0]+1
+			registers[reg] = registers[reg] - v
+			continue loop
 		case Jump:
+			var loc byte
+			loc, registers[0] = memory[registers[0]], registers[0]+1
+			registers[0] = loc
 		case Beqz:
+			var reg, offset byte
+			reg, registers[0] = memory[registers[0]], registers[0]+1
+			offset, registers[0] = memory[registers[0]], registers[0]+1
+			if registers[reg] == 0 {
+				registers[0] += offset
+			}
+			continue loop
 		case Halt:
 		default:
 			break loop
