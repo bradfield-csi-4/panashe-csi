@@ -1,6 +1,8 @@
 package vm
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	Load  = 0x01
@@ -27,64 +29,54 @@ const (
 // __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ ... __
 // ^==DATA===============^ ^==INSTRUCTIONS==============^
 //
-
 func compute(memory []byte) {
 
 	registers := [3]byte{8, 0, 0} // PC, R1 and R2
 
-	// Keep looping, like a physical computer's clock
-loop:
 	for {
+		pc := registers[0]
+		op := memory[pc]
 
-		op := memory[registers[0]] // fetch the opcode
-		registers[0]++
-		// decode and execute
+		if op == Halt {
+			return
+		}
+
+		// fetch opargs: most instructions have 2
+		arg1, arg2 := memory[pc+1], memory[pc+2]
+
+		// execute
 		switch op {
 		case Load:
-			var reg, addr byte
-			reg, registers[0] = memory[registers[0]], registers[0]+1
-			addr, registers[0] = memory[registers[0]], registers[0]+1
-			registers[reg] = memory[addr]
+			// load a value into the specified register
+			registers[arg1] = memory[arg2]
+			registers[0] += 3
 		case Store:
-			var reg, addr byte
-			reg, registers[0] = memory[registers[0]], registers[0]+1
-			addr, registers[0] = memory[registers[0]], registers[0]+1
-			memory[addr] = registers[reg]
+			// store a value from a register
+			memory[arg2] = registers[arg1]
+			registers[0] += 3
 		case Add:
-			var reg1, reg2 byte
-			reg1, registers[0] = memory[registers[0]], registers[0]+1
-			reg2, registers[0] = memory[registers[0]], registers[0]+1
-			registers[reg1] = registers[reg1] + registers[reg2]
+			// perform addition and replace arg1 with the result
+			registers[arg1] += registers[arg2]
+			registers[0] += 3
 		case Sub:
-			var reg1, reg2 byte
-			reg1, registers[0] = memory[registers[0]], registers[0]+1
-			reg2, registers[0] = memory[registers[0]], registers[0]+1
-			registers[reg1] = registers[reg1] - registers[reg2]
+			// perofrm substraction and replace arg1 with the result
+			registers[arg1] -= registers[arg2]
+			registers[0] += 3
 		case Addi:
-			var reg, v byte
-			reg, registers[0] = memory[registers[0]], registers[0]+1
-			v, registers[0] = memory[registers[0]], registers[0]+1
-			registers[reg] = registers[reg] + v
+			registers[arg1] += arg2
+			registers[0] += 3
 		case Subi:
-			var reg, v byte
-			reg, registers[0] = memory[registers[0]], registers[0]+1
-			v, registers[0] = memory[registers[0]], registers[0]+1
-			registers[reg] = registers[reg] - v
+			registers[arg1] -= arg2
+			registers[0] += 3
 		case Jump:
-			var loc byte
-			loc, registers[0] = memory[registers[0]], registers[0]+1
-			registers[0] = loc
+			registers[0] = arg1
 		case Beqz:
-			var reg, offset byte
-			reg, registers[0] = memory[registers[0]], registers[0]+1
-			offset, registers[0] = memory[registers[0]], registers[0]+1
-			if registers[reg] == 0 {
-				registers[0] += offset
+			registers[0] += 3
+			if registers[arg1] == 0 {
+				registers[0] += arg2
 			}
-		case Halt:
-			break loop
 		default:
-			panic(fmt.Sprintf("Unrecognized operation %x", op))
+			panic(fmt.Sprintf("Invalid opcode: 0x%02x", op))
 		}
 	}
 }
