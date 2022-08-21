@@ -1,0 +1,8 @@
+Come back to:
+- set up flamegraphs properly https://jvns.ca/perf-zine.pdf
+- read perf docs https://github.com/torvalds/linux/tree/master/tools/perf/Documentation
+- can use this toolkit to build custom profilers https://github.com/iovisor/bcc
+
+Question:
+what are the instructions and branch predictions counting really?
+
