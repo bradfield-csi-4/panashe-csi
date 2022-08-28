@@ -1,0 +1,10 @@
+Initial run, no changes:
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                      709           2099879 ns/op
+BenchmarkMetrics/Average_payment-16                   46          24077340 ns/op
+BenchmarkMetrics/Payment_stddev-16                    22          49040990 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       6.798s
