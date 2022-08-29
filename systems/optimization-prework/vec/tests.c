@@ -1,6 +1,9 @@
 #include "vendor/unity.h"
+#include <time.h>
 
 #include "vec.h"
+
+#define TEST_LOOPS 100
 
 extern data_t dotproduct(vec_ptr, vec_ptr);
 
@@ -61,5 +64,43 @@ int main(void) {
     RUN_TEST(test_basic);
     RUN_TEST(test_longer);
 
+    int ignore, i = 0;
+    uint64_t memory_size, p_size_pow;
+    uint64_t msizes[] = {1L << 32, 1L << 40, 1L << 52};
+    uint64_t psize_pows[] = {12, 16, 32};
+    clock_t baseline_start = clock();
+    for (i = 0; i < TEST_LOOPS; i++) {
+      memory_size = msizes[i % 3];
+      p_size_pow = psize_pows[i % 3];
+      ignore += 1 + memory_size +
+                p_size_pow; // so that this loop isn't just optimized away
+    }
+    clock_t baseline_end = clock();
+
+    clock_t start = clock();
+    for (i = 0; i < TEST_LOOPS; i++) {
+	    //test_empty();
+	    //test_basic();
+	    test_longer();
+    }
+    clock_t end_clock = clock();
+    clock_t clocks_elapsed = end_clock - start - (baseline_end - baseline_start);
+    double time_elapsed = clocks_elapsed * 1.0 / CLOCKS_PER_SEC;
+
+    printf("%.2fs to run %d `longer` tests (%.2fns per test)\n", time_elapsed, TEST_LOOPS, time_elapsed * 1e9 / TEST_LOOPS);
     return UNITY_END();
 }
+
+/*
+ * Initial data (very consistent, +- 10ms):
+ * 0.88s to run 100 `longer` tests (8811300.00ns per test)
+ *
+ * Move length check before the loop
+ * 0.83s to run 100 `longer` tests (8317900.00ns per test)
+ *
+ * Access internal data array directly instead of function call
+ * 0.70s to run 100 `longer` tests (6953300.00ns per test)
+ *
+ * 2 element loop unroll
+ * 0.68s to run 100 `longer` tests (6843270.00ns per test)
+ */
