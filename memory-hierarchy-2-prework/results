@@ -88,3 +88,14 @@ BenchmarkMetrics/Average_payment-16                 5929            180313 ns/op
 BenchmarkMetrics/Payment_stddev-16                   277           4295829 ns/op
 PASS
 ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       4.676s
+
+Loop unrolling
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                    64573             17439 ns/op
+BenchmarkMetrics/Average_payment-16                 5929            180313 ns/op
+BenchmarkMetrics/Payment_stddev-16                   277           4295829 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       4.676s
