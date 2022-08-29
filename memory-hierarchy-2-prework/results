@@ -8,3 +8,83 @@ BenchmarkMetrics/Average_payment-16                   46          24077340 ns/op
 BenchmarkMetrics/Payment_stddev-16                    22          49040990 ns/op
 PASS
 ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       6.798s
+
+First change: I made total and count integers, and only converted to floats at the end in AverageAge
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                      723           1563042 ns/op
+BenchmarkMetrics/Average_payment-16                   39          26862607 ns/op
+BenchmarkMetrics/Payment_stddev-16                    25          40819957 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       5.230s
+
+So from 2.1 to 1.6 ms / op. A 25% reduction. Not bad!
+
+In each routine, I moved counting out of the loop, and just called len on respective collections
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                      729           1520938 ns/op
+BenchmarkMetrics/Average_payment-16                   58          19375629 ns/op
+BenchmarkMetrics/Payment_stddev-16                    25          42276120 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       5.782s
+
+The standard deviation algorithm was calling into the mean algorithm. Instead, changed to calculate in same loop. 35% reduction!
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                      764           1516358 ns/op
+BenchmarkMetrics/Average_payment-16                   60          17289119 ns/op
+BenchmarkMetrics/Payment_stddev-16                    38          27312093 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       6.347s
+The load data code splits the cent amount into dollars and cents. Instead, we keep the amount in cents, and only convert to dollars when returning.
+
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                      757           1556993 ns/op
+BenchmarkMetrics/Average_payment-16                  100          10273468 ns/op
+BenchmarkMetrics/Payment_stddev-16                    57          20184533 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       6.272s
+
+Changed the code to use arrays instead of user maps. Holy smokes! 97% reduction on the first test :crying emoji:
+
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                    25404             46126 ns/op
+BenchmarkMetrics/Average_payment-16                  624           1727126 ns/op
+BenchmarkMetrics/Payment_stddev-16                   128           9223887 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       6.623s
+
+Further simplified Payment to just an array of cent amounts
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                    25494             45800 ns/op
+BenchmarkMetrics/Average_payment-16                 2199            460326 ns/op
+BenchmarkMetrics/Payment_stddev-16                   130           9077851 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       6.062s
+
+Did some loop unrolling for the first two
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                    64573             17439 ns/op
+BenchmarkMetrics/Average_payment-16                 5929            180313 ns/op
+BenchmarkMetrics/Payment_stddev-16                   277           4295829 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       4.676s
