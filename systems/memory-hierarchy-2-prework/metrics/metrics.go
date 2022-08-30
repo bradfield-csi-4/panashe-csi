@@ -72,17 +72,17 @@ func AveragePaymentAmount(payments []int) float64 {
 
 
 func StdDevPaymentAmount(payments []int) float64 {
-	count, mean, M2 := 0.0, 0.0, 0.0
+	sum, squareSum := float64(0), float64(0)
 	for _, p := range payments {
-		count += 1
 		amount := float64(p)
-		delta := amount - mean
-		mean += delta / count
-		delta2 := amount - mean
-		M2 += delta * delta2
+		sum += amount
+		squareSum += amount * amount
 	}
 
-    return math.Sqrt(M2 / count) / 100
+	count := len(payments)
+	mean := float64(sum) / float64(count)
+	variance := (float64(squareSum) / float64(count)) - (mean * mean)
+	return math.Sqrt(variance) / 100
 }
 
 func LoadData() ([]int, []int, UserMap) {

@@ -99,3 +99,14 @@ BenchmarkMetrics/Average_payment-16                 5929            180313 ns/op
 BenchmarkMetrics/Payment_stddev-16                   277           4295829 ns/op
 PASS
 ok      _/home/panashe/src/panashe-csi/memory-hierarchy-2-prework/metrics       4.676s
+
+Further algorithm improvment in stddeviation (taken from sample solution)
+❯ go test -bench=.
+goos: linux
+goarch: amd64
+cpu: 12th Gen Intel(R) Core(TM) i7-1260P
+BenchmarkMetrics/Average_age-16                    64527             17667 ns/op
+BenchmarkMetrics/Average_payment-16                 6216            175493 ns/op
+BenchmarkMetrics/Payment_stddev-16                  2719            437334 ns/op
+PASS
+ok      _/home/panashe/src/panashe-csi/systems/memory-hierarchy-2-prework/metrics       4.421s
