@@ -4,39 +4,64 @@
 
 #define TEST_LOOPS 10000000
 
+<<<<<<< HEAD
 uint64_t pagecount(uint64_t memory_size, uint64_t p_size_pow) {
   return memory_size >> p_size_pow;
+=======
+uint64_t pagecount(uint64_t memory_size, uint64_t page_size) {
+  return memory_size / page_size;
+>>>>>>> be55fec (Add systems assembly and optimization prework)
 }
 
 int main (int argc, char** argv) {
   clock_t baseline_start, baseline_end, test_start, test_end;
+<<<<<<< HEAD
   uint64_t memory_size, p_size_pow;
+=======
+  uint64_t memory_size, page_size;
+>>>>>>> be55fec (Add systems assembly and optimization prework)
   double clocks_elapsed, time_elapsed;
   int i, ignore = 0;
 
   uint64_t msizes[] = {1L << 32, 1L << 40, 1L << 52};
+<<<<<<< HEAD
   uint64_t psize_pows[] = {12, 16, 32};
+=======
+  uint64_t psizes[] = {1L << 12, 1L << 16, 1L << 32};
+>>>>>>> be55fec (Add systems assembly and optimization prework)
 
   baseline_start = clock();
   for (i = 0; i < TEST_LOOPS; i++) {
     memory_size = msizes[i % 3];
+<<<<<<< HEAD
     p_size_pow = psize_pows[i % 3];
     ignore += 1 + memory_size +
               p_size_pow; // so that this loop isn't just optimized away
+=======
+    page_size = psizes[i % 3];
+    ignore += 1 + memory_size +
+              page_size; // so that this loop isn't just optimized away
+>>>>>>> be55fec (Add systems assembly and optimization prework)
   }
   baseline_end = clock();
 
   test_start = clock();
   for (i = 0; i < TEST_LOOPS; i++) {
     memory_size = msizes[i % 3];
+<<<<<<< HEAD
     p_size_pow = psize_pows[i % 3];
     ignore += pagecount(memory_size, p_size_pow) + memory_size + p_size_pow;
+=======
+    page_size = psizes[i % 3];
+    ignore += pagecount(memory_size, page_size) + memory_size + page_size;
+>>>>>>> be55fec (Add systems assembly and optimization prework)
   }
   test_end = clock();
 
   clocks_elapsed = test_end - test_start - (baseline_end - baseline_start);
   time_elapsed = clocks_elapsed / CLOCKS_PER_SEC;
 
+<<<<<<< HEAD
   printf("%.2fs to run %d tests (%.2fns per test)\n", time_elapsed, TEST_LOOPS,
          time_elapsed * 1e9 / TEST_LOOPS);
   return ignore;
@@ -165,3 +190,10 @@ $ perf stat ./unoptimized-pagecount
 
 So the optimized version uses nearly half as many cpu cycles by that measure
 */
+=======
+  /* printf("%.2fs to run %d tests (%.2fns per test)\n", time_elapsed, TEST_LOOPS, */
+  /*        time_elapsed * 1e9 / TEST_LOOPS); */
+  return ignore;
+}
+
+>>>>>>> be55fec (Add systems assembly and optimization prework)

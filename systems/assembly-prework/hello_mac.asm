@@ -20,4 +20,4 @@ _main:    mov       rax, 0x02000004         ; system call for write
           syscall                           ; invoke operating system to exit
 
           section   .data
-message:  db        "Hello, World", 10      ; note the newline at the end
+message:  db  0x48, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100, 10      ; note the newline at the end

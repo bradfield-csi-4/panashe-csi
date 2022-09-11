@@ -1,10 +1,16 @@
 #include "vendor/unity.h"
+<<<<<<< HEAD
 #include <time.h>
 
 #include "vec.h"
 
 #define TEST_LOOPS 100
 
+=======
+
+#include "vec.h"
+
+>>>>>>> be55fec (Add systems assembly and optimization prework)
 extern data_t dotproduct(vec_ptr, vec_ptr);
 
 void setUp(void) {
@@ -64,6 +70,7 @@ int main(void) {
     RUN_TEST(test_basic);
     RUN_TEST(test_longer);
 
+<<<<<<< HEAD
     int ignore, i = 0;
     uint64_t memory_size, p_size_pow;
     uint64_t msizes[] = {1L << 32, 1L << 40, 1L << 52};
@@ -104,3 +111,7 @@ int main(void) {
  * 2 element loop unroll
  * 0.68s to run 100 `longer` tests (6843270.00ns per test)
  */
+=======
+    return UNITY_END();
+}
+>>>>>>> be55fec (Add systems assembly and optimization prework)
