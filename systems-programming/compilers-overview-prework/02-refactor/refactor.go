@@ -52,7 +52,7 @@ func (s decls) Less(i, j int) bool {
 		case *dst.FuncDecl:
 			return true
 		}
-		return i < j
+		return false
 	}
 }
 
@@ -63,7 +63,7 @@ func SortFunctions(src string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sort.Sort(decls(f.Decls))
+	sort.Stable(decls(f.Decls))
 	var result strings.Builder
 	decorator.Fprint(&result, f)
 	return result.String(), nil

@@ -8,7 +8,7 @@ import (
 
 func TestSortFunctions(t *testing.T) {
 	const (
-		numCases  = 1
+		numCases  = 2
 		inputFmt  = "test_cases/input-%02d.txt"
 		outputFmt = "test_cases/output-%02d.txt"
 	)
