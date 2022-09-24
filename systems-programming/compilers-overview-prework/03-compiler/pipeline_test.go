@@ -16,6 +16,18 @@ type testCase struct {
 
 var testCases = []testCase{
 	{
+		name: "Simple Addition",
+		src: `package f
+
+func f(x, y byte) byte {
+	return x + y
+}`,
+		examples: []funcExample{
+			{38, 62, 100},
+			{17, 55, 72},
+		},
+	},
+	{
 		name: "Single Return Expression",
 		src: `package f
 

@@ -15,122 +15,122 @@ type vmTest struct {
 }
 
 var mainTests = []vmTest{
-	// // Do nothing, just halt
-	// {
-	// 	name: "Halt",
-	// 	asm: `
-// halt`,
-	// 	cases: []vmCase{{0, 0, 0}},
-	// },
-	// // Move a value from input to output
-	// {
-	// 	name: "LoadStore",
-	// 	asm: `
-// load r1 1
-// store r1 0
-// halt`,
-	// 	cases: []vmCase{
-	// 		{1, 0, 1},
-	// 		{255, 0, 255},
-	// 	},
-	// },
-	// // Add two unsigned integers together
-	// {
-	// 	name: "Add",
-	// 	asm: `
-// load r1 1
-// load r2 2
-// add r1 r2
-// store r1 0
-// halt`,
-	// 	cases: []vmCase{
-	// 		{1, 2, 3},     // 1 + 2 = 3
-	// 		{254, 1, 255}, // support max int
-	// 		{255, 1, 0},   // correctly overflow
-	// 	},
-	// },
-	// {
-	// 	name: "Subtract",
-	// 	asm: `
-// load r1 1
-// load r2 2
-// sub r1 r2
-// store r1 0
-// halt`,
-	// 	cases: []vmCase{
-	// 		{5, 3, 2},
-	// 		{0, 1, 255}, // correctly overflow backwards
-	// 	},
-	// },
+	// Do nothing, just halt
+	{
+		name: "Halt",
+		asm: `
+halt`,
+		cases: []vmCase{{0, 0, 0}},
+	},
+	// Move a value from input to output
+	{
+		name: "LoadStore",
+		asm: `
+load r1 1
+store r1 0
+halt`,
+		cases: []vmCase{
+			{1, 0, 1},
+			{255, 0, 255},
+		},
+	},
+	// Add two unsigned integers together
+	{
+		name: "Add",
+		asm: `
+load r1 1
+load r2 2
+add r1 r2
+store r1 0
+halt`,
+		cases: []vmCase{
+			{1, 2, 3},     // 1 + 2 = 3
+			{254, 1, 255}, // support max int
+			{255, 1, 0},   // correctly overflow
+		},
+	},
+	{
+		name: "Subtract",
+		asm: `
+load r1 1
+load r2 2
+sub r1 r2
+store r1 0
+halt`,
+		cases: []vmCase{
+			{5, 3, 2},
+			{0, 1, 255}, // correctly overflow backwards
+		},
+	},
 }
 
 var stretchGoalTests = []vmTest{
-	// // Support a basic jump, ie skipping ahead to a particular location
-	// {
-	// 	name: "Jump",
-	// 	asm: `
-// load r1 1
-// jump 16
-// store r1 0
-// halt`,
-	// 	cases: []vmCase{{42, 0, 0}},
-	// },
-	// // Support a "branch if equal to zero" with relative offsets
-	// {
-	// 	name: "Beqz",
-	// 	asm: `
-// load r1 1
-// load r2 2
-// beqz r2 3
-// store r1 0
-// halt`,
-	// 	cases: []vmCase{
-	// 		{42, 0, 0},  // r2 is zero, so should branch over the store
-	// 		{42, 1, 42}, // r2 is nonzero, so should store back 42
-	// 	},
-	// },
-	// // Support adding immediate values
-	// {
-	// 	name: "Addi",
-	// 	asm: `
-// load r1 1
-// addi r1 3
-// addi r1 5
-// store r1 0
-// halt`,
-	// 	cases: []vmCase{
-	// 		{0, 0, 8},   // 0 + 3 + 5 = 8
-	// 		{20, 0, 28}, // 20 + 3 + 5 = 8
-	// 	},
-	// },
-	// // Calculate the sum of first n numbers (using subi to decrement loop index)
-	// {
-	// 	name: "Sum to n",
-	// 	asm: `
-// load r1 1
-// beqz r1 8
-// add r2 r1
-// subi r1 1
-// jump 11
-// store r2 0
-// halt`,
-	// 	cases: []vmCase{
-	// 		{0, 0, 0},
-	// 		{1, 0, 1},
-	// 		{5, 0, 15},
-	// 		{10, 0, 55},
-	// 	},
-	// },
+	// Support a basic jump, ie skipping ahead to a particular location
+	{
+		name: "Jump",
+		asm: `
+load r1 1
+jump 16
+store r1 0
+halt`,
+		cases: []vmCase{{42, 0, 0}},
+	},
+	// Support a "branch if equal to zero" with relative offsets
+	{
+		name: "Beqz",
+		asm: `
+load r1 1
+load r2 2
+beqz r2 3
+store r1 0
+halt`,
+		cases: []vmCase{
+			{42, 0, 0},  // r2 is zero, so should branch over the store
+			{42, 1, 42}, // r2 is nonzero, so should store back 42
+		},
+	},
+	// Support adding immediate values
+	{
+		name: "Addi",
+		asm: `
+load r1 1
+addi r1 3
+addi r1 5
+store r1 0
+halt`,
+		cases: []vmCase{
+			{0, 0, 8},   // 0 + 3 + 5 = 8
+			{20, 0, 28}, // 20 + 3 + 5 = 8
+		},
+	},
+	// Calculate the sum of first n numbers (using subi to decrement loop index)
+	{
+		name: "Sum to n",
+		asm: `
+load r1 1
+beqz r1 8
+add r2 r1
+subi r1 1
+jump 11
+store r2 0
+halt`,
+		cases: []vmCase{
+			{0, 0, 0},
+			{1, 0, 1},
+			{5, 0, 15},
+			{10, 0, 55},
+		},
+	},
 	{
 		name: "Jump test",
 		asm: `
 jump 2
 halt`,
 		cases: []vmCase{
-			// {0, 0, 0},
-			// {1, 0, 1},
-			// {5, 0, 15},
-			// {10, 0, 55},
+			{0, 0, 0},
+			{1, 0, 1},
+			{5, 0, 15},
+			{10, 0, 55},
 		},
 	},
 }
