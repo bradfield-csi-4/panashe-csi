@@ -30,7 +30,7 @@ func TestSortFunctions(t *testing.T) {
 		}
 
 		if actual != string(expected) {
-			t.Fatalf("Bad output for test case %d\n", i)
+			t.Fatalf("Bad output for test case %d\nExpected: %v\n\nGot: %v", i, string(expected), actual)
 		}
 	}
 }
